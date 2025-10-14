@@ -9,6 +9,7 @@ using UnityEngine.Networking;
 using GG.Shared; //new
 using GG.BeanBattles; //new
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace BeanBattlesMapMaker
 {
@@ -36,12 +37,6 @@ namespace BeanBattlesMapMaker
                         }
                     }
                 }
-
-                /*foreach (ScriptBaseClass customScript in GameObject.FindObjectsOfType<ScriptBaseClass>())
-                {
-                    Debug.Log("Reset: " + customScript.name);
-                    customScript.ResetObject();
-                }*/
             }
         }
 
@@ -83,16 +78,17 @@ namespace BeanBattlesMapMaker
         [HarmonyPatch(typeof(CustomNetworkManager), "OnJoinMatch")]
         static bool Prefix(bool success, ref GG.Shared.Match match, CustomNetworkManager __instance)
         {
-            if (match.PublicData.TryGetValue("bb-custom-map", out string map))
+            if (match.PublicData.TryGetValue("mod-0", out string map))
             {
-                if (MapMakerPlugin.mapsList.ContainsKey(map))
-                {
-                    SetupMap.joinedCustomMap = true;
-                    SetupMap.selectedMap = MapMakerPlugin.mapsList[map];
-                    return true;
-                }
-                __instance.gameLog.NewLog($"Custom Map '{map}' not Found!");
-                return false;
+                    if (MapMakerPlugin.mapsList.ContainsKey(map))
+                    {
+                        __instance.gameLog.NewLog($"Joining Map: '{map}'");
+                        SetupMap.joinedCustomMap = true;
+                        SetupMap.selectedMap = MapMakerPlugin.mapsList[map];
+                        return true;
+                    }
+                    __instance.gameLog.NewLog($"Custom Map, '{map}', not Found!");
+                    return false;
             }
             SetupMap.isServer = false;
             return true;
@@ -100,14 +96,14 @@ namespace BeanBattlesMapMaker
 
         [HarmonyPatch(typeof(GGServerManager), "CreateMatch")]
         [HarmonyPrefix]
-        static void MatchNamePatch(ref Dictionary<string, string> gameSpecificPublicData)
+        static void MatchNamePatch(ref string name, ref Dictionary<string, string> gameSpecificPublicData)
         {
             if (SetupMap.selectedMapName != null)
             {
                 Debug.Log("Adding custom map name to public match data.");
-                gameSpecificPublicData.Add("bb-custom-map", SetupMap.selectedMapName);
+                gameSpecificPublicData.Add("mod-0", SetupMap.selectedMapName);
+                name += " | Custom Map";
             }
-
         }
 
         [HarmonyPatch(typeof(Health), "Respawn")]
